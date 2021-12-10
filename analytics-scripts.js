@@ -1,26 +1,32 @@
 window.addEventListener('load', function() {
 
   ///////////////////////////////////////
-  // Set data-analytics on appropriate elements.
+  // Set data-analytics on appropriate elements for call to plausible on a download event.
   // Properties can be provided as follows:
-  //    json+ld (schema.org)
-  //    metadata (dublin core)
-  //    doi provided in the page url
+  //    const DOI = "10.5061/dryad.0cfxpnw32"; (javascript, in document header - set before other scripts)
+  //    json+ld (schema.org metadata)
+  //    html meta tags (dublin core metadata)
+  //    page url (could contain the doi)
   ///////////////////////////////////////
 
-  // Scan the document for elements with data-metadata-id.
-  // Try to build the data_analytics attribute for them.
-  // Construct the data-analytics tag for any links or buttons with custom attribute: 'data-metadata-id'
+  // Scan the document for metadata.  Extract the DOI.
+  // Scan the document for elements marked with the data-analytics attribute (download links or buttons).
+  // Construct the data-analytics tag with the appropriate properties for any links or buttons, setting the doi property.
+  // Other properties can be added if needed.
+
+  const DOWNLOAD_EVENT = "downloads";
+  const DOWNLOAD_ATTRIBUTE = "data-analytics-downloads";
+  // Only set here for testing.
+  // const DOI = "https://doi.org/10.5061/dryad.0cfxpnw32";
+
   var element;
-  var data_analytics = {"props":{"doi": ''}};
+  var elements;
+  var data_analytics = {"props":{"doi": ""}};
   var doi;
 
   //
-  // GET THE DOI, add data-analytics property appropriately to
+  // GET the DOI from any of the following sources:
   //
-  // const DOI = "https://doi.org/10.5061/dryad.0cfxpnw32"
-  //
-  var test_doi = "https://doi.org/10.5061/dryad.0cfxpnw32";
 
   doi = (
     doi_in_tracking_snippet() ||
@@ -30,17 +36,19 @@ window.addEventListener('load', function() {
     null
   );
 
-  ////////////////////
+  ////////////////////////////////////
 
-  // This is where we will set the data-analytics properties.
+  // Set the data-analytics properties.  Currently, we only handle downloads with the doi.
 
   if (!doi) {
-    console.error("Error: No DOI provided. Download tracking disabled because of missing DOI.");
+    console.error("Error: No DOI provided in metadata. Download tracking disabled because of missing DOI.");
   } else {
     // Add doi data-analytics properties here!
+    elements = document.querySelectorAll("a[data-analytics]");
+    registerDownloadProperties(elements, doi, data_analytics);
   }
 
-  ////////////////////
+  ////////////////////////////////////
 
   function doi_in_tracking_snippet () {
     if ((typeof DOI !== 'undefined') && DOI) {
@@ -58,7 +66,7 @@ window.addEventListener('load', function() {
     if ((element = document.querySelector('script[type="application/ld+json"]')) &&
         (json = JSON.parse(element.textContent)) &&
         (('@context' in json) && (json['@context'] == 'http://schema.org')) &&
-        (('@id' in json) && (text = json['@id'].match(/https?:\/\/.*doi.org\/(.*$)/)))) 
+        (('@id' in json) && (text = json['@id'].match(/https?:\/\/.*doi.org\/(.*$)/))))
     {
       ret = text[1];
       console.log("*****DOI IN SCHEMA.ORG METADATA");
@@ -96,57 +104,25 @@ window.addEventListener('load', function() {
     return ret;
   }
 
-  /*
-  let elements = document.querySelectorAll("a[data-metadata-schema='schema.org']");
-  console.log("============>WE ARE TAGGING THESE schema.org ELEMENTS:");
-  console.log(elements);
-  //addSchemaAnalyticsProps(elements);
-
-  elements = document.querySelectorAll("a[data-metadata-schema='dublin_core']");
-  console.log("============>WE ARE TAGGING THESE dublin_core ELEMENTS:");
-  console.log(elements);
-  //addSchemaAnalyticsProps(elements);
-
-  // Pull doi from url - example
-
-  // Otherwise do nothing.
-
-  elements = document.querySelectorAll('a[data-metadata-id]');
-  //console.log("WE ARE TAGGING THESE ELEMENTS:");
-  //console.log(elements);
-  //console.log("LOOKING FOR ELEMENT #DOI!!");
-  element = document.querySelector("a#doi");
-  if (element) {
-    data_analytics = {"props":{"doi": doi}};
-    console.log(JSON.stringify(data_analytics));
-    element.setAttribute('data-analytics', '"downloads1", ' + JSON.stringify(data_analytics));
-    console.log("GOT ELEMENT #DOI!!!");
-  } else {
-    console.log("DID NOT FIND ELEMENT #DOI!!!");
+//
+// Iterate Elements and add download event properties.
+//
+// @param {NodeList} Array of elements
+// @param {string} callback function name
+//
+function registerDownloadProperties(elements, doi, data_analytics) {
+  if (!(elements || doi || props)) {
+    return;
   }
-
-  //
-  // Iterate Elements to build the data_analytics property.
-  //
-  // @param {NodeList} Array of elements
-  // @param {string} callback function name
-  //
-  function addAnalyticsProps(elements) {
-    console.log('============>CALLED addAnalyticsProps with elements.length = ', elements.length);
-    for (var i = 0; i < elements.length; i++) {
-        console.log('elements ' + i);
-        console.log(elements[i]);
-
-        // if schema.org metadata
-
-        // elseif dublincore metadata
-
-        // else try to get doi from url
-
-
-    }
+  for (var i = 0; i < elements.length; i++) {
+      data_analytics.props.doi = doi;
+      elements[i].setAttribute('data-analytics', '"' + DOWNLOAD_EVENT + '", ' + JSON.stringify(data_analytics));
+      console.log('SETTING DOWNLOAD PROPERTIES FOR ELEMENT: ' + i);
+      console.log('DOI IS:  ' + doi);
+      console.log('PROPS ARE: ');
+      console.log(data_analytics);
   }
-*/
+}
 
   //////////////////////////////////////////////////////////////////////////////////////////
   //  CUSTOM EVENT HANDLER CODE FROM PLAUSIBLE.IO FOR 'data-analytics' link and form events:
