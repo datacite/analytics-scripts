@@ -70,7 +70,6 @@ window.addEventListener('load', function() {
     // Handle link events - those that have data-analytics
     elements = document.querySelectorAll("a[data-analytics]");
     registerAnalyticsEvents(elements, handleLinkEvent);
-    console.log("REGISTERING LINK EVENTS!")
 
     // Handle button form events - those that have data-analytics
     elements = document.querySelectorAll("button[data-analytics]");
@@ -141,9 +140,6 @@ window.addEventListener('load', function() {
   //
   function registerDownloadProperties(elements, doi) {
     var props = DOWNLOAD_PROPS;
-    console.log("REGISTERING DOWNLOAD PROPERTIES FOR DOI: " + doi);
-    console.log("ELEMENTS ARE:");
-    console.log (elements);
 
     if (!elements) {
       return;
@@ -156,10 +152,6 @@ window.addEventListener('load', function() {
     // ultimately, we want to get and parse any properties that are already there.
     for (var i = 0; i < elements.length; i++) {
         elements[i].setAttribute('data-analytics', '"' + DOWNLOAD_EVENT + '", ' + JSON.stringify(props));
-        console.log('SETTING DOWNLOAD PROPERTIES FOR ELEMENT: ' + i);
-        console.log('DOI IS:  ' + doi);
-        console.log('PROPS ARE: ');
-        console.log(props);
     }
   }
 
@@ -178,7 +170,6 @@ window.addEventListener('load', function() {
       for (var i = 0; i < elements.length; i++) {
           elements[i].addEventListener('click', callback);
           elements[i].addEventListener('auxclick', callback);
-          console.log('REGISTER LINK EVENT: ' + i);
       }
   }
 
@@ -195,8 +186,6 @@ window.addEventListener('load', function() {
       while (link && (typeof link.tagName == 'undefined' || link.tagName.toLowerCase() != 'a' || !link.href)) {
           link = link.parentNode;
       }
-      console.log("Handling event!");
-      console.log(link);
       if (middle || click)
           registerEvent(link.getAttribute('data-analytics'));
 
