@@ -2,50 +2,79 @@ window.addEventListener('load', function() {
 
   ///////////////////////////////////////
   // Set data-analytics on appropriate elements for call to plausible on a download event.
+  //
   // Properties can be provided as follows:
   //    const DOI = "10.5061/dryad.0cfxpnw32"; (javascript, in document header - set before other scripts)
   //    json+ld (schema.org metadata)
   //    html meta tags (dublin core metadata)
   //    page url (could contain the doi)
+  //
+  // A lot of the code here is the suggested code for custom events documented at:
+  // https://plausible.io/docs/custom-event-goals
   ///////////////////////////////////////
 
-  // Scan the document for metadata.  Extract the DOI.
-  // Scan the document for elements marked with the data-analytics attribute (download links or buttons).
-  // Construct the data-analytics tag with the appropriate properties for any links or buttons, setting the doi property.
-  // Other properties can be added if needed.
+  //
+  // On load:
+  //   Scan the document for metadata.  Extract the DOI.
+  //   Scan the document for elements marked with the data-analytics attribute (download links or buttons).
+  //   Construct the data-analytics tag with the appropriate properties for any links or buttons, setting the doi property.
+  //   Other properties can be added if needed.
+  //
 
+  // The event must match exactly with what is defined in plausible analytics as a custom goal.
   const DOWNLOAD_EVENT = "downloads";
   const DOWNLOAD_ATTRIBUTE = "data-analytics-downloads";
-  // Only set here for testing.
+  const DOWNLOAD_PROPS = {"props":{}};
+
+  // Only set DOI here for testing.
   // const DOI = "https://doi.org/10.5061/dryad.0cfxpnw32";
 
-  var element;
-  var elements;
-  var data_analytics = {"props":{"doi": ""}};
-  var doi;
+  registerDownloads();
 
   //
-  // GET the DOI from any of the following sources:
+  // This is the main process for registering downloads for analytics
   //
+  function registerDownloads () {
+    var element;
+    var elements;
+    var doi = "";
 
-  doi = (
-    doi_in_tracking_snippet() ||
-    doi_in_schema_org_md() ||
-    doi_in_dublin_core_md() ||
-    doi_in_url() ||
-    null
-  );
+    //
+    // GET the DOI from any of the following sources.  D
+    //
 
-  ////////////////////////////////////
+    doi = (
+      doi_in_tracking_snippet() ||
+      doi_in_schema_org_md() ||
+      doi_in_dublin_core_md() ||
+      doi_in_url() ||
+      ""
+    );
 
-  // Set the data-analytics properties.  Currently, we only handle downloads with the doi.
+    ////////////////////////////////////
 
-  if (!doi) {
-    console.error("Error: No DOI provided in metadata. Download tracking disabled because of missing DOI.");
-  } else {
-    // Add doi data-analytics properties here!
+    // Set the data-analytics properties for elements marked as data-analytics-downloads.
+    // The only property we handle right now is doi.
+    // Others can always be added.
+    // An error is reported if there is no doi, but we still handle it
+    // because it tells us that there are some downloads missing a doi.
+
+    if (!doi) {
+      console.error("Error: No DOI provided in metadata.");
+    }
+
+    // Add data-analytics attribute to elements marked with data-analytics-downloads.
+    elements = document.querySelectorAll("a[" + DOWNLOAD_ATTRIBUTE + "]");
+    registerDownloadProperties(elements, doi);
+
+    // Handle link events - those that have data-analytics
     elements = document.querySelectorAll("a[data-analytics]");
-    registerDownloadProperties(elements, doi, data_analytics);
+    registerAnalyticsEvents(elements, handleLinkEvent);
+    console.log("REGISTERING LINK EVENTS!")
+
+    // Handle button form events - those that have data-analytics
+    elements = document.querySelectorAll("button[data-analytics]");
+    registerAnalyticsEvents(elements, handleFormEvent);
   }
 
   ////////////////////////////////////
@@ -59,7 +88,7 @@ window.addEventListener('load', function() {
   }
 
   function doi_in_schema_org_md() {
-    var ret = null;
+    var ret = "";
     var element;
     var json;
     var text;
@@ -76,7 +105,7 @@ window.addEventListener('load', function() {
   }
 
   function doi_in_dublin_core_md() {
-    var ret = null;
+    var ret = "";
     var element;
     var text;
     if ((element = document.querySelector('meta[name="DC.Identifier"]')) &&
@@ -91,7 +120,7 @@ window.addEventListener('load', function() {
   }
 
   function doi_in_url() {
-    var ret = null;
+    var ret = "";
     var text;
     if ((element = decodeURIComponent(document.URL)) &&
         (text = element.match(/https?:\/\/.*\-doi:(.*$)/)))
@@ -104,39 +133,40 @@ window.addEventListener('load', function() {
     return ret;
   }
 
-//
-// Iterate Elements and add download event properties.
-//
-// @param {NodeList} Array of elements
-// @param {string} callback function name
-//
-function registerDownloadProperties(elements, doi, data_analytics) {
-  if (!(elements || doi || props)) {
-    return;
+  //
+  // Iterate Elements and add download event properties.
+  //
+  // @param {NodeList} Array of elements
+  // @param {string} callback function name
+  //
+  function registerDownloadProperties(elements, doi) {
+    var props = DOWNLOAD_PROPS;
+    console.log("REGISTERING DOWNLOAD PROPERTIES FOR DOI: " + doi);
+    console.log("ELEMENTS ARE:");
+    console.log (elements);
+
+    if (!elements) {
+      return;
+    }
+
+    if (doi) {
+      props.props.doi = doi;
+    }
+
+    // ultimately, we want to get and parse any properties that are already there.
+    for (var i = 0; i < elements.length; i++) {
+        elements[i].setAttribute('data-analytics', '"' + DOWNLOAD_EVENT + '", ' + JSON.stringify(props));
+        console.log('SETTING DOWNLOAD PROPERTIES FOR ELEMENT: ' + i);
+        console.log('DOI IS:  ' + doi);
+        console.log('PROPS ARE: ');
+        console.log(props);
+    }
   }
-  for (var i = 0; i < elements.length; i++) {
-      data_analytics.props.doi = doi;
-      elements[i].setAttribute('data-analytics', '"' + DOWNLOAD_EVENT + '", ' + JSON.stringify(data_analytics));
-      console.log('SETTING DOWNLOAD PROPERTIES FOR ELEMENT: ' + i);
-      console.log('DOI IS:  ' + doi);
-      console.log('PROPS ARE: ');
-      console.log(data_analytics);
-  }
-}
 
   //////////////////////////////////////////////////////////////////////////////////////////
   //  CUSTOM EVENT HANDLER CODE FROM PLAUSIBLE.IO FOR 'data-analytics' link and form events:
   //  https://plausible.io/docs/custom-event-goals
   //////////////////////////////////////////////////////////////////////////////////////////
-
-  // Handle link events - those that have data-analytics
-  elements = document.querySelectorAll("a[data-analytics]");
-  registerAnalyticsEvents(elements, handleLinkEvent);
-  console.log("REGISTERING LINK EVENTS!")
-
-  // Handle button form events - those that have data-analytics
-  elements = document.querySelectorAll("button[data-analytics]");
-  registerAnalyticsEvents(elements, handleFormEvent);
 
   //
   // Iterate Elements and add event listener
@@ -204,6 +234,9 @@ function registerDownloadProperties(elements, doi, data_analytics) {
   */
   function registerEvent(data) {
     // break into array
+    if (!data) {
+      return;
+    }
     let attributes = data.split(/,(.+)/);
 
     // Parse it to object
