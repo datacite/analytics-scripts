@@ -26,8 +26,11 @@ window.addEventListener('load', function() {
   const DOWNLOAD_ATTRIBUTE = "data-analytics-downloads";
   const DOWNLOAD_PROPS = {"props":{}};
 
-  // Only set DOI here for testing.
+  ///////////////
+  // FOR TESTING.
   // const DOI = "https://doi.org/10.5061/dryad.0cfxpnw32";
+  // const TEST_URL = 'https://datadryad.org/stash/dataset/doi:10.5061%2Fdryad.0cfxpnw32';
+  //////////////
 
   registerDownloads();
 
@@ -121,11 +124,18 @@ window.addEventListener('load', function() {
   function doi_in_url() {
     var ret = "";
     var text;
-    if ((element = decodeURIComponent(document.URL)) &&
-        (text = element.match(/https?:\/\/.*\-doi:(.*$)/)))
-        // (text = element.match(/https?:\/\/.*\/doi:(.*$)/)))
+
+    if ((typeof TEST_URL !== 'undefined') && TEST_URL) {
+      url = new URL(TEST_URL).pathname;
+    } else {
+      url = new URL(document.URL).pathname;
+    }
+
+    if ((text = url.match(/\/doi:(.*)$/)) &&
+        (text = text[1].replace(/\/$/, '')) &&
+        (text = decodeURIComponent(text)))
     {
-      ret = text[1];
+      ret = text;
       console.log("*****DOI IN URL");
       console.log(ret);
     }
