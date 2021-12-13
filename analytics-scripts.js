@@ -94,12 +94,15 @@ window.addEventListener('load', function() {
     var element;
     var json;
     var text;
+
     if ((element = document.querySelector('script[type="application/ld+json"]')) &&
         (json = JSON.parse(element.textContent)) &&
         (('@context' in json) && (json['@context'] == 'http://schema.org')) &&
-        (('@id' in json) && (text = json['@id'].match(/https?:\/\/.*doi.org\/(.*$)/))))
+        (('@id' in json) && (text = new URL(json['@id']).pathname)) &&
+        (text = text.replace(/^\//, '')) &&
+        (text = text.replace(/\/$/, '')))
     {
-      ret = text[1];
+      ret = text;
       console.log("*****DOI IN SCHEMA.ORG METADATA");
       console.log(ret);
     }
@@ -108,13 +111,16 @@ window.addEventListener('load', function() {
 
   function doi_in_dublin_core_md() {
     var ret = "";
-    var element;
     var text;
+    var url;
+
     if ((element = document.querySelector('meta[name="DC.Identifier"]')) &&
-        (text = element.getAttribute('content')) &&
-        (text = text.match(/https?:\/\/.*doi.org\/(.*$)/)))
+        (url = element.getAttribute('content')) &&
+        (text = new URL(url).pathname) &&
+        (text = text.replace(/^\//, '')) &&
+        (text = text.replace(/\/$/, '')))
     {
-      ret = text[1];
+      ret = text;
       console.log("*****DOI IN DUBLIN CORE METADATA");
       console.log(ret);
     }
@@ -123,15 +129,16 @@ window.addEventListener('load', function() {
 
   function doi_in_url() {
     var ret = "";
+    var path;
     var text;
 
     if ((typeof TEST_URL !== 'undefined') && TEST_URL) {
-      url = new URL(TEST_URL).pathname;
+      path = new URL(TEST_URL).pathname;
     } else {
-      url = new URL(document.URL).pathname;
+      path = new URL(document.URL).pathname;
     }
 
-    if ((text = url.match(/\/doi:(.*)$/)) &&
+    if ((text = path.match(/\/doi:(.*)$/)) &&
         (text = text[1].replace(/\/$/, '')) &&
         (text = decodeURIComponent(text)))
     {
