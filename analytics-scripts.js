@@ -82,7 +82,9 @@ window.addEventListener('load', function() {
   ////////////////////////////////////
 
   function doi_in_tracking_snippet () {
-    if ((typeof DOI !== 'undefined') && DOI) {
+    if ((typeof DOI !== 'undefined') && DOI &&
+        validate_doi(DOI))
+    {
       console.log("*****DOI IN TRACKING SNIPPET");
       console.log(DOI);
     }
@@ -91,18 +93,35 @@ window.addEventListener('load', function() {
 
   function doi_in_schema_org_md() {
     var ret = "";
-    var element;
-    var json;
-    var text;
+    var element, json, url, doi, identifiers;
 
     if ((element = document.querySelector('script[type="application/ld+json"]')) &&
         (json = JSON.parse(element.textContent)) &&
-        (('@context' in json) && (json['@context'] == 'http://schema.org')) &&
-        (('@id' in json) && (text = new URL(json['@id']).pathname)) &&
-        (text = text.replace(/^\//, '')) &&
-        (text = text.replace(/\/$/, '')))
+        (('@context' in json) && (json['@context'] == 'http://schema.org')))
     {
-      ret = text;
+      if (('@id' in json) && (url = json['@id']) &&
+          (doi = doi_from_url(url)))
+      {
+        ret = doi;
+      } else if (('identifier' in json) && json.identifier) {
+        identifiers = [];
+        if (typeof json.identifier == 'string') {
+          identifiers[0] = json.identifier;
+        } else if (Array.isArray(json.identifier)) {
+          identifiers = json.identifier;
+        }
+        identifiers.every(url => {
+          if (url && (doi = doi_from_url(url))) {
+            ret = doi;
+            return false;
+          } else {
+            return true;
+          }
+        });
+      }
+    }
+
+    if (ret) {
       console.log("*****DOI IN SCHEMA.ORG METADATA");
       console.log(ret);
     }
@@ -111,16 +130,13 @@ window.addEventListener('load', function() {
 
   function doi_in_dublin_core_md() {
     var ret = "";
-    var text;
-    var url;
+    var element, url, doi;
 
     if ((element = document.querySelector('meta[name="DC.Identifier"]')) &&
         (url = element.getAttribute('content')) &&
-        (text = new URL(url).pathname) &&
-        (text = text.replace(/^\//, '')) &&
-        (text = text.replace(/\/$/, '')))
+        (doi = doi_from_url(url)))
     {
-      ret = text;
+      ret = doi;
       console.log("*****DOI IN DUBLIN CORE METADATA");
       console.log(ret);
     }
@@ -129,23 +145,21 @@ window.addEventListener('load', function() {
 
   function doi_in_url() {
     var ret = "";
-    var path;
-    var text;
+    var url, doi;
 
     if ((typeof TEST_URL !== 'undefined') && TEST_URL) {
-      path = new URL(TEST_URL).pathname;
+      url = TEST_URL;
     } else {
-      path = new URL(document.URL).pathname;
+      url = document.URL;
     }
 
-    if ((text = path.match(/\/doi:(.*)$/)) &&
-        (text = text[1].replace(/\/$/, '')) &&
-        (text = decodeURIComponent(text)))
+    if (url && (doi = doi_from_doc_url(url)))
     {
-      ret = text;
+      ret = doi;
       console.log("*****DOI IN URL");
       console.log(ret);
     }
+
     return ret;
   }
 
@@ -249,5 +263,57 @@ window.addEventListener('load', function() {
     let events = [JSON.parse(attributes[0]), JSON.parse(attributes[1] || '{}')];
 
     plausible(...events);
+  }
+
+  ///////////////////////////////////////////////////////////////
+  // Functions derived from:
+  //   https://github.com/datacite/bolognese/blob/0f3b1d1f3830399a24e69d0f2262e7ff7c0190c9/lib/bolognese/doi_utils.rb
+  //   https://github.com/datacite/pidcheck/blob/master/crawler/pidcheck/spiders/pid_spider.py
+  ///////////////////////////////////////////////////////////////
+
+  function doi_from_url(url) {
+    var ret = "";
+    var doi;
+
+    if (url &&
+        (doi = url.match(/^(?:(http|https):\/(\/)?(dx\.)?(doi.org|handle.stage.datacite.org|handle.test.datacite.org)\/)?(doi:)?(10\.\d{4,5}\/.+)$/)) &&
+        (doi = doi[6]) &&
+        (doi = decodeURIComponent(doi).toLowerCase()))
+    {
+      ret = doi
+    }
+
+    return ret;
+  }
+
+  function doi_from_doc_url(url) {
+    var ret = "";
+    var path, text, doi;
+
+    if (url &&
+      (url = new URL(url)) &&
+      (path = url.pathname) &&
+      (text = path.match(/\/doi:(.*)$/)) &&
+      (text = text[1].replace(/\/$/, '')) &&
+      (doi = decodeURIComponent(text)) &&
+      (validate_doi(doi)))
+    {
+      ret = doi;
+    }
+
+    return ret;
+  }
+
+  function validate_doi(doi) {
+    var ret = "";
+
+    if (doi &&
+      (doi = doi.match(/^(10\.\d{4,5}\/.+)$/)) &&
+      (doi[1]))
+    {
+      ret = doi[1];
+    }
+
+    return ret;
   }
 })
