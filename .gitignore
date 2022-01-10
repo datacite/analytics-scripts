@@ -40,3 +40,5 @@ Thumbs.db
 
 # Temporary files #
 *~
+/dist
+/node_modules
