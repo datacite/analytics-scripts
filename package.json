@@ -1,0 +1,28 @@
+{
+  "name": "analytics-scripts",
+  "version": "1.0.0",
+  "description": "Contains example scripts for use in sites that track dataset inquiries/downloads using the [DataCite self-hosted Plausible Analytics](https://analytics.stage.datacite.org).",
+  "main": "analytics-scripts.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "./node_modules/.bin/babel src --presets babel-preset-es2015 --out-dir dist",
+    "prepublish": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/datacite/analytics-scripts.git"
+  },
+  "author": "Kristian Garza <kj.garza@gmail.com>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/datacite/analytics-scripts/issues"
+  },
+  "homepage": "https://github.com/datacite/analytics-scripts#readme",
+  "dependencies": {
+    "plausible-tracker": "^0.3.4"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-preset-es2015": "^6.24.1"
+  }
+}
